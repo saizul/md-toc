@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "toc": "md-toc README.md \"docs/**/*.md\"",
+    "toc:check": "md-toc --check README.md \"docs/**/*.md\""
+  }
+}

@@ -1,0 +1,72 @@
+name: Markdown TOC check (md-toc)
+description: Fail the build when a table of contents between <!-- toc --> markers is missing or out of date.
+author: Saizul Amin
+branding:
+  icon: list
+  color: blue
+
+inputs:
+  files:
+    description: Files, directories or globs to check, separated by spaces or new lines.
+    required: false
+    default: README.md
+  min-depth:
+    description: Smallest heading level to include (1-6). Empty means the md-toc default (2).
+    required: false
+    default: ''
+  max-depth:
+    description: Largest heading level to include (1-6). Empty means the md-toc default (6).
+    required: false
+    default: ''
+  ordered:
+    description: Set to "true" if your TOCs are numbered lists.
+    required: false
+    default: 'false'
+  bullet:
+    description: Bullet character of your TOCs, "-", "*" or "+". Empty means "-".
+    required: false
+    default: ''
+  strict:
+    description: Set to "true" to also fail on files without a <!-- toc --> marker.
+    required: false
+    default: 'false'
+  node-version:
+    description: Node.js version to set up with actions/setup-node. Set to an empty string to use the Node.js already on the runner (20 or newer).
+    required: false
+    default: '22'
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      if: inputs.node-version != ''
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Build md-toc
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        npm ci --no-audit --no-fund --loglevel=error
+        npm run build --silent
+
+    - name: Check tables of contents
+      shell: bash
+      env:
+        MD_TOC_FILES: ${{ inputs.files }}
+        MD_TOC_MIN_DEPTH: ${{ inputs.min-depth }}
+        MD_TOC_MAX_DEPTH: ${{ inputs.max-depth }}
+        MD_TOC_ORDERED: ${{ inputs.ordered }}
+        MD_TOC_BULLET: ${{ inputs.bullet }}
+        MD_TOC_STRICT: ${{ inputs.strict }}
+      run: |
+        set -f  # the CLI expands globs itself
+        args=(--check)
+        if [ -n "$MD_TOC_MIN_DEPTH" ]; then args+=(--min-depth "$MD_TOC_MIN_DEPTH"); fi
+        if [ -n "$MD_TOC_MAX_DEPTH" ]; then args+=(--max-depth "$MD_TOC_MAX_DEPTH"); fi
+        if [ "$MD_TOC_ORDERED" = "true" ]; then args+=(--ordered); fi
+        if [ -n "$MD_TOC_BULLET" ]; then args+=(--bullet "$MD_TOC_BULLET"); fi
+        if [ "$MD_TOC_STRICT" = "true" ]; then args+=(--strict); fi
+        # shellcheck disable=SC2086 # split the list of files on whitespace
+        node "$GITHUB_ACTION_PATH/dist/esm/cli.js" "${args[@]}" -- $MD_TOC_FILES

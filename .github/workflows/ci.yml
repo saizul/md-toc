@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint and typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+
+  test:
+    name: Node ${{ matrix.node }} on ${{ matrix.os }}
+    needs: lint
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        node: [20, 22]
+        include:
+          - os: windows-latest
+            node: 22
+          - os: macos-latest
+            node: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Run the examples against the build
+        run: |
+          node examples/basic.mjs
+          node examples/commonjs.cjs
+      - name: Smoke-test the CLI
+        shell: bash
+        run: |
+          node dist/esm/cli.js --version
+          node dist/esm/cli.js --check README.md CONTRIBUTING.md "test/fixtures/*.expected.md"
+          if node dist/esm/cli.js --check test/fixtures/basic.md; then echo "expected exit code 1" && exit 1; fi
+          cp test/fixtures/basic.md tmp-basic.md
+          node dist/esm/cli.js tmp-basic.md
+          cmp tmp-basic.md test/fixtures/basic.expected.md
+      - name: Check the packed package
+        run: npm pack --dry-run
+
+  action:
+    name: GitHub Action
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check up-to-date files
+        uses: ./
+        with:
+          files: |
+            README.md
+            CONTRIBUTING.md
+            test/fixtures/*.expected.md
+      - name: Check a stale file (must fail)
+        id: stale
+        continue-on-error: true
+        uses: ./
+        with:
+          files: test/fixtures/basic.md
+          node-version: ''
+      - name: Assert the stale check failed
+        if: steps.stale.outcome != 'failure'
+        run: |
+          echo "the action should have failed on a stale table of contents"
+          exit 1
