@@ -8,6 +8,7 @@ export {
   renderToc,
   type TocOptions,
   toc,
+  type UpdateOptions,
   type UpdateResult,
   updateToc,
 } from './toc.js';

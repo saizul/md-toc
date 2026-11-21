@@ -138,7 +138,11 @@ ignored, so you can document them (like this README does). Only the first
 start marker in a file is used.
 
 Files without a marker are skipped and reported, and do not fail `--check`
-unless you pass `--strict`.
+unless you pass `--strict`. With `--insert`, md-toc adds the markers (and
+the TOC) to such files instead, on their own line right before the first
+section: the first heading after the `#` title, or the first heading when
+there is no title. That keeps the title, badges and intro paragraph above
+the TOC. Files with no headings besides the title are left alone.
 
 The heading directly above the start marker (with only blank lines in
 between), such as `## Contents` here, is the TOC's own title and is left
@@ -184,6 +188,8 @@ Options:
       --max-depth <N>   largest heading level to include (default 6)
       --ordered         numbered list instead of bullets
       --bullet <char>   bullet for unordered lists: -, * or + (default -)
+      --insert          add markers before the first section of files that
+                        have none (with --check: fail for those files)
       --strict          also fail when a file has no <!-- toc --> marker
   -q, --quiet           only print problems
   -h, --help            show this help
@@ -246,13 +252,16 @@ runner, which takes a few seconds and needs no registry token.
 ### `updateToc(markdown, options?)`
 
 Writes the TOC between the markers and returns
-`{ markdown, changed, found, headings }`. `found` is false when there is no
-start marker (the text is returned unchanged); `changed` is true when the
-TOC was missing or stale. When nothing changed, `markdown` is the very same
-string you passed in.
+`{ markdown, changed, found, inserted, headings }`. `found` is false when
+there is no start marker (the text is returned unchanged); `changed` is true
+when the TOC was missing or stale. When nothing changed, `markdown` is the
+very same string you passed in.
 
-Options (`TocOptions`): `minDepth` (default 2), `maxDepth` (default 6),
-`ordered` (default false), `bullet` (`'-'`, `'*'` or `'+'`).
+Options (`UpdateOptions`, which extends `TocOptions`): `minDepth` (default
+2), `maxDepth` (default 6), `ordered` (default false), `bullet` (`'-'`,
+`'*'` or `'+'`), and `insert` (default false): add markers before the first
+section when the document has none, as described under [Markers](#markers).
+`inserted` is true when that happened.
 
 ### `isTocUpToDate(markdown, options?)`
 
@@ -364,8 +373,6 @@ run the GitHub Action on pull requests so no stale TOC gets merged.
 
 Ideas, many of them good first issues:
 
-- `--insert` to add markers after the first heading when a file has none
-  (good first issue)
 - A `--diff` flag that prints what `--check` would change (good first issue)
 - GitLab-compatible anchors with `--slug gitlab`
 - `--indent 4` for linters that want four-space nested lists (good first issue)

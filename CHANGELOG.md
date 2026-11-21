@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `--insert` (and `updateToc(md, { insert: true })`): files without a
+  `<!-- toc -->` marker get one, with the TOC, right before their first
+  section (the first heading after the `#` title). With `--check`, such files
+  fail with "has no table of contents". `UpdateResult` gains `inserted`.
+
 ## [0.1.0] - 2026-11-19
 
 ### Added

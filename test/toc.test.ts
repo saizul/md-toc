@@ -81,9 +81,55 @@ describe('updateToc', () => {
     const md = '# A\n## B\n';
     assert.deepEqual(
       { ...updateToc(md), headings: undefined },
-      { markdown: md, changed: false, found: false, headings: undefined },
+      { markdown: md, changed: false, found: false, inserted: false, headings: undefined },
     );
     assert.equal(isTocUpToDate(md), false);
+  });
+
+  it('inserts markers before the first section with insert: true', () => {
+    const md = '# Title\n\nIntro text.\n\n## One\n\n### Deep\n\n## Two\n';
+    const out = updateToc(md, { insert: true });
+    assert.equal(out.changed, true);
+    assert.equal(out.found, true);
+    assert.equal(out.inserted, true);
+    assert.equal(
+      out.markdown,
+      '# Title\n\nIntro text.\n\n<!-- toc -->\n\n- [One](#one)\n  - [Deep](#deep)\n- [Two](#two)\n\n<!-- tocstop -->\n\n## One\n\n### Deep\n\n## Two\n',
+    );
+    // Running it again is a no-op, now that the markers exist.
+    assert.deepEqual(
+      { ...updateToc(out.markdown, { insert: true }), headings: undefined },
+      { markdown: out.markdown, changed: false, found: true, inserted: false, headings: undefined },
+    );
+  });
+
+  it('insert adds a blank line after a title with no intro and keeps CRLF', () => {
+    assert.equal(
+      updateToc('# T\r\n## A\r\n', { insert: true }).markdown,
+      '# T\r\n\r\n<!-- toc -->\r\n\r\n- [A](#a)\r\n\r\n<!-- tocstop -->\r\n\r\n## A\r\n',
+    );
+  });
+
+  it('insert uses the first heading when there is no title, and skips setext titles', () => {
+    assert.match(updateToc('Intro\n\n## A\n## B\n', { insert: true }).markdown, /^Intro\n\n<!-- toc -->\n/);
+    const setext = updateToc('Title\n=====\n\n## A\n', { insert: true }).markdown;
+    assert.equal(setext, 'Title\n=====\n\n<!-- toc -->\n\n- [A](#a)\n\n<!-- tocstop -->\n\n## A\n');
+  });
+
+  it('insert leaves documents without sections alone and still validates options', () => {
+    for (const md of ['', 'just text\n', '# Only a title\n']) {
+      const out = updateToc(md, { insert: true });
+      assert.equal(out.markdown, md);
+      assert.equal(out.inserted, false);
+      assert.equal(out.found, false);
+    }
+    assert.throws(() => updateToc('# T\n## A\n', { insert: true, maxDepth: 9 }), TocError);
+  });
+
+  it('insert ignores headings inside code fences and front matter', () => {
+    const md = '---\ntitle: x\n---\n# T\n\n```\n## not a heading\n```\n\n## Real\n';
+    const out = updateToc(md, { insert: true }).markdown;
+    assert.ok(out.includes('```\n\n<!-- toc -->\n\n- [Real](#real)\n\n<!-- tocstop -->\n\n## Real\n'), out);
   });
 
   it('replaces an outdated TOC and keeps the rest of the file byte for byte', () => {

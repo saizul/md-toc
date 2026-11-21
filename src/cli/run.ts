@@ -1,5 +1,5 @@
 import { TocError } from '../errors.js';
-import { type TocOptions, updateToc } from '../toc.js';
+import { type UpdateOptions, updateToc } from '../toc.js';
 import { VERSION } from '../version.js';
 
 export interface CliIO {
@@ -23,6 +23,8 @@ Options:
       --max-depth <N>   largest heading level to include (default 6)
       --ordered         numbered list instead of bullets
       --bullet <char>   bullet for unordered lists: -, * or + (default -)
+      --insert          add markers before the first section of files that
+                        have none (with --check: fail for those files)
       --strict          also fail when a file has no <!-- toc --> marker
   -q, --quiet           only print problems
   -h, --help            show this help
@@ -48,7 +50,7 @@ interface Args {
   stdout: boolean;
   strict: boolean;
   quiet: boolean;
-  options: TocOptions;
+  options: UpdateOptions;
 }
 
 function depth(flag: string, text: string): number {
@@ -81,6 +83,7 @@ function parseArgs(argv: string[]): Args | 'help' | 'version' {
     else if (arg === '-c' || arg === '--check') args.check = true;
     else if (arg === '--stdout') args.stdout = true;
     else if (arg === '--strict') args.strict = true;
+    else if (arg === '--insert') args.options.insert = true;
     else if (arg === '-q' || arg === '--quiet') args.quiet = true;
     else if (arg === '--ordered') args.options.ordered = true;
     else if (arg === '--min-depth') args.options.minDepth = depth(arg, value());
@@ -177,7 +180,9 @@ export function run(argv: string[], io: CliIO): number {
       say(`${name}: up to date\n`);
     } else if (args.check) {
       stale++;
-      io.stderr(`md-toc: ${name}: table of contents is out of date\n`);
+      io.stderr(
+        `md-toc: ${name}: ${result.inserted ? 'has no table of contents' : 'table of contents is out of date'}\n`,
+      );
     } else {
       try {
         io.writeFile(file, result.markdown);
@@ -187,13 +192,14 @@ export function run(argv: string[], io: CliIO): number {
         errors++;
         continue;
       }
-      say(`${name}: updated\n`);
+      say(`${name}: ${result.inserted ? 'inserted a table of contents' : 'updated'}\n`);
     }
   }
   if (errors > 0) return 2;
   if (stale > 0) {
     const list = files.length === 1 ? clean(files[0]!) : '<files>';
-    io.stderr(`Run "md-toc ${list}" to update ${stale === 1 ? 'it' : 'them'}.\n`);
+    const flag = args.options.insert ? ' --insert' : '';
+    io.stderr(`Run "md-toc${flag} ${list}" to update ${stale === 1 ? 'it' : 'them'}.\n`);
     return 1;
   }
   if (args.strict && missing > 0) return 1;

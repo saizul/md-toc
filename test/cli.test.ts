@@ -122,6 +122,25 @@ describe('cli', () => {
     assert.match(r.stderr, /docs\/plain\.md: no <!-- toc --> marker, skipped/);
   });
 
+  it('--insert adds markers to files without them', () => {
+    const c = cli(['--check', '--insert', 'docs/plain.md']);
+    assert.equal(c.code, 1);
+    assert.equal(
+      c.stderr,
+      'md-toc: docs/plain.md: has no table of contents\nRun "md-toc --insert docs/plain.md" to update it.\n',
+    );
+    assert.equal(text('docs/plain.md'), '# No markers\n## Here\n');
+    const r = cli(['--insert', 'docs/plain.md', 'README.md']);
+    assert.equal(r.code, 0);
+    assert.equal(r.stdout, 'docs/plain.md: inserted a table of contents\nREADME.md: updated\n');
+    assert.equal(
+      text('docs/plain.md'),
+      '# No markers\n\n<!-- toc -->\n\n- [Here](#here)\n\n<!-- tocstop -->\n\n## Here\n',
+    );
+    assert.equal(text('README.md'), FRESH);
+    assert.equal(cli(['--check', '--strict', '--insert', 'docs/plain.md']).code, 0);
+  });
+
   it('prints to stdout with --stdout', () => {
     const r = cli(['--stdout', 'README.md', '--max-depth=2', '--ordered']);
     assert.equal(r.code, 0);
