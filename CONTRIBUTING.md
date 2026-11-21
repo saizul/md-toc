@@ -99,20 +99,17 @@ These are deliberately small. Each one lists where to start.
 1. **`--diff`**: with `--check`, print the old and new TOC lines for each
    stale file. The old block is `lines.slice(markers.start, markers.end + 1)`
    in `src/toc.ts`; print in `src/cli/run.ts`.
-2. **`--insert`**: when a file has no marker, add `<!-- toc -->` after the
-   first `#` heading. Add an option to `updateToc()` in `src/toc.ts` and a
-   flag in `src/cli/run.ts`.
-3. **`--indent 4`**: some linters want four spaces per nested level. Add an
+2. **`--indent 4`**: some linters want four spaces per nested level. Add an
    `indent` option to `TocOptions` and use it in `renderToc()` for bullets.
-4. **`--stdin`**: read Markdown from standard input and print the result,
+3. **`--stdin`**: read Markdown from standard input and print the result,
    for editor integrations. Change `parseArgs()` in `src/cli/run.ts`.
-5. **More slug tests**: add headings in a language you know to the table
+4. **More slug tests**: add headings in a language you know to the table
    in `test/slug.test.ts`, with the anchor GitHub gives them.
-6. **A `<details>` fixture**: document how headings inside `<details>` are
+5. **A `<details>` fixture**: document how headings inside `<details>` are
    handled with a new file in `test/fixtures/`.
-7. **`.md-toc.json` config**: read default options from a file in the
+6. **`.md-toc.json` config**: read default options from a file in the
    current directory in `src/cli.ts`, keeping `src/cli/run.ts` testable.
-8. **Action output**: add an `outputs.stale-files` value to `action.yml`
+7. **Action output**: add an `outputs.stale-files` value to `action.yml`
    listing the files that failed, for use in later workflow steps.
 
 ## Pull requests
